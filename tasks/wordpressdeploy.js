@@ -149,4 +149,23 @@ module.exports = function(grunt) {
 
     util.rsync_pull(config);
   });
+
+  /*
+   * create_config
+   * Sync all target files with the local location
+   */
+  grunt.registerTask("create_config", "Create wp-config using settings.", function () {
+
+    var task_options = grunt.config.get('wordpressdeploy')['options'];
+    var target = grunt.option('target') || task_options['target'];
+
+    if (typeof target === "undefined" || typeof grunt.config.get('wordpressdeploy')[target] === "undefined") {
+        grunt.fail.warn("Invalid target provided. I cannot create the config from nowhere! Please checked your configuration and provide a valid target.", 6);
+    }
+
+    // Grab the options
+    var target_options = grunt.config.get('wordpressdeploy')[target];
+
+    util.wp_config(target_options);
+  });
 };

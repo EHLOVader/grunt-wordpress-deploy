@@ -42,6 +42,15 @@ exports.init = function (grunt) {
     grunt.log.oklns("Sync completed successfully.");
   };
 
+  exports.wp_config = function (config) {
+    grunt.log.oklns("Generating wp-config");
+
+    var cmd = exports.wp_config_cmd(config);
+    shell.exec(cmd);
+
+    grunt.log.oklns("Config created successfully.");
+  };
+
   exports.generate_backup_paths = function(target, task_options) {
 
     var backups_dir = task_options['backups_dir'] || "backups";
@@ -89,6 +98,31 @@ exports.init = function (grunt) {
     var output = exports.replace_urls(old_url, new_url, content);
 
     grunt.file.write(file, output);
+  };
+
+  exports.wp_config_cmd = function (config) {
+    var cmd = grunt.template.process(tpls.config, {
+      data: {
+        user: config.user,
+        pass: config.pass,
+        database: config.database,
+        path: config.path
+      }
+    });
+
+    if (typeof config.ssh_host === "undefined") {
+      grunt.log.oklns("No config processed for local");
+    } else {
+      var tpl_ssh = grunt.template.process(tpls.ssh, {
+        data: {
+          host: config.ssh_host
+        }
+      });
+
+      cmd = tpl_ssh + " '" + cmd + "'";
+    }
+
+    return cmd;
   };
 
   exports.replace_urls = function(search, replace, content) {
@@ -225,6 +259,7 @@ exports.init = function (grunt) {
     rsync_push: "rsync <%= rsync_args %> --delete -e 'ssh <%= ssh_host %>' <%= exclusions %> <%= from %> :<%= to %>",
     rsync_pull: "rsync <%= rsync_args %> -e 'ssh <%= ssh_host %>' <%= exclusions %> :<%= from %> <%= to %>",
     ssh: "ssh <%= host %>",
+    config: "cd <%= path %> && cp -n wp-config-sample.php wp-config.php && sed -i \"/DB_HOST/s/'\"'\"'[^'\"'\"']*'\"'\"'/'\"'\"'localhost'\"'\"'/2\" wp-config.php && sed -i \"/DB_NAME/s/'\"'\"'[^'\"'\"']*'\"'\"'/'\"'\"'<%= database %>'\"'\"'/2\" wp-config.php && sed -i \"/DB_USER/s/'\"'\"'[^'\"'\"']*'\"'\"'/'\"'\"'<%= user %>'\"'\"'/2\" wp-config.php && sed -i \"/DB_PASSWORD/s/'\"'\"'[^'\"'\"']*'\"'\"'/'\"'\"'<%= pass %>'\"'\"'/2\" wp-config.php",
   };
 
   return exports;
